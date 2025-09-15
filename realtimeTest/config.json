@@ -1,0 +1,8 @@
+{
+  "temperature": 0.55,
+  "voice": "Alloy",
+  "threshold": 0.6,
+  "prefix_padding_ms": 500,
+  "silence_duration_ms": 500,
+  "instructions": ""
+}

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI全能教师系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <span class="logo-text">AI全能教师</span>
+                </div>
+                <button class="new-chat-btn" onclick="startNewChat()">
+                    <i class="fas fa-plus"></i>
+                    新对话
+                </button>
+                <button class="new-chat-btn" style=" margin-top: 10px; text-align: center;" onclick="openMcpManager()">
+                    <i class="fas fa-cog"></i>
+                    管理MCP
+                </button>
+                <button class="new-chat-btn" id="voiceCallBtn" style=" margin-top: 10px; text-align: center; background: #28a745;" onclick="window.location.href='http://localhost:8000';">
+                    <i class="fas fa-phone" id="voiceCallIcon"></i>
+                    <span id="voiceCallText">开始通话</span>
+                </button>
+            </div>
+            
+            <div class="sidebar-nav">
+                <div class="nav-item active">
+                    <i class="fas fa-comments"></i>
+                    <span>智能对话</span>
+                </div>
+            </div>
+            
+            <div class="conversation-history">
+                <div class="history-header">
+                    <span>对话历史</span>
+                    <button class="clear-all-btn" onclick="clearAllConversations()" title="清空所有对话">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="history-list" id="conversationList">
+                    <!-- 对话历史将在这里动态加载 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <div class="chat-container" id="chatContainer">
+                <!-- 欢迎界面 -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h2>AI教师等你提问</h2>
+                    <p>我可以教授各种学科知识，包括数学、科学、语言、历史、艺术、技术等</p>
+                    <div class="feature-cards">
+                        <div class="feature-card">
+                            <i class="fas fa-brain"></i>
+                            <span>智能教学</span>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-tools"></i>
+                            <span>自动工具调用</span>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-users"></i>
+                            <span>多智能体协作</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 语音通话状态显示 -->
+                    <div class="voice-call-status" id="voiceCallStatus" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                        <div class="status-header">
+                            <i class="fas fa-microphone" style="color: #28a745;"></i>
+                            <span style="margin-left: 8px; font-weight: bold;">语音通话中</span>
+                        </div>
+                        <div class="status-info" id="voiceCallInfo" style="margin-top: 8px; font-size: 14px; color: #666;">
+                            正在监听您的语音...
+                        </div>
+                        <div class="status-controls" style="margin-top: 10px;">
+                            <button class="btn btn-sm btn-outline-danger" onclick="endVoiceCall()">
+                                <i class="fas fa-stop"></i>
+                                结束通话
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 聊天消息区域 -->
+                <div class="messages-container" id="messagesContainer" style="display: none;">
+                    <!-- 消息将在这里动态添加 -->
+                </div>
+            </div>
+            
+            <!-- 输入区域 -->
+            <div class="input-container">
+                <!-- 简化后的输入区域，移除不需要的功能选项 -->
+                
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="给AI教师发送消息..." 
+                            rows="1"
+                            onkeydown="handleKeyDown(event)"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                        <div class="input-actions">
+                            <button class="action-btn" onclick="uploadFile()" title="上传文件">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            <button class="action-btn" id="recordBtn" onclick="toggleRecording()" title="语音输入">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button class="action-btn" onclick="retryLastMessage()" title="重试">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                            <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 文件上传模态框 -->
+    <div class="modal" id="fileUploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>上传文件</h3>
+                <button class="close-btn" onclick="closeFileUploadModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>拖拽文件到此处或点击选择文件</p>
+                    <input type="file" id="fileInput" multiple accept=".pdf,.txt,.doc,.docx,.py,.js,.java,.cpp,.c,.csv,.xlsx,.xls,.mp3,.wav,.m4a,.webm,.ogg" style="display: none;">
+                </div>
+                <div class="uploaded-files" id="uploadedFiles">
+                    <!-- 已上传文件列表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MCP 管理模态框 -->
+    <div class="modal" id="mcpManagerModal">
+        <div class="modal-content" style="max-width: 720px;">
+            <div class="modal-header">
+                <h3>MCP 管理</h3>
+                <button class="close-btn" onclick="closeMcpManager()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="font-weight:600;">已启用的 MCP</div>
+                    <button class="action-btn" onclick="openCreateMcp()" title="添加MCP"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="mcpList">
+                    <!-- 通过JS加载当前MCP列表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建/编辑 MCP 模态框 -->
+    <div class="modal" id="mcpEditModal">
+        <div class="modal-content" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3 id="mcpEditTitle">新建 MCP</h3>
+                <button class="close-btn" onclick="closeMcpEdit()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>名称</label>
+                    <input id="mcpName" type="text" placeholder="例如：WebSearchMCP" />
+                </div>
+                <div class="form-row">
+                    <label>描述</label>
+                    <textarea id="mcpDesc" rows="3" placeholder="简要描述此MCP的用途"></textarea>
+                </div>
+                <div class="form-row" style="display:flex; align-items:center; gap:8px;">
+                    <label>启用</label>
+                    <input id="mcpEnabled" type="checkbox" />
+                </div>
+                <div class="form-row">
+                    <label>配置(JSON)</label>
+                    <textarea id="mcpConfig" rows="6" placeholder='{"type":"web_search","max_results":3}'></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button class="primary-btn" onclick="saveMcp()"><i class="fas fa-save"></i><span>保存</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
