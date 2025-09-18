@@ -58,7 +58,7 @@ except Exception:
 # =============================================================================
 
 # 设置OpenAI API Key
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "Your openai-api-key"
 
 # 创建Flask应用
 app = Flask(__name__)
